@@ -1,0 +1,35 @@
+name: Node CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [12.x]
+    steps:
+    - uses: actions/checkout@v1
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: ci
+      run: npm ci
+    - name: test
+      run: npm test
+      env:
+        CI: true
+    - name: pack
+      run: |
+        npm pack
+        mv zero-to-sixty-* zero-to-sixty.tgz
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: app
+        path: zero-to-sixty.tgz
+    - name: Publish artifact
+      run: bin/publish
+      env:
+        API_KEY: ${{ secrets.GITHUB_TOKEN }}

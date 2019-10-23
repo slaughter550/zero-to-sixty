@@ -1,0 +1,37 @@
+#!/bin/bash -ex
+
+echo $GITHUB_REPOSITORY
+echo $GITHUB_EVENT_NAME
+echo $GITHUB_SHA
+echo $GITHUB_REF
+echo $API_KEY
+
+SHA_VERSION=$(git rev-parse --short $GITHUB_SHA)
+SYM_VERSION=$(node -p "require('./package.json').version")
+
+upload_id=$(curl \
+    -sSL \
+    -XPOST \
+    --url https://api.github.com/repos/$GITHUB_REPOSITORY/releases \
+    --header "authorization: Bearer $API_KEY" \
+    --header "Content-Type:application/json" \
+    --data "{
+        \"tag_name\": \"v$SYM_VERSION\",
+        \"target_commitish\": \"$GITHUB_SHA\",
+        \"name\": \"Autorelease for v$SYM_VERSION\",
+        \"body\": \"Autorelease for $GITHUB_SHA\",
+        \"draft\": false,
+        \"prerelease\": false
+    }" | \
+    jq -r '.id'
+)
+
+FILENAME="zero-to-sixty.tgz"
+UPLOAD_URL="https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/${upload_id}/assets?name=${FILENAME}"
+response=$(curl \
+    -sSL \
+    -XPOST \
+    --header "authorization: Bearer $API_KEY" \
+    --upload-file "${FILENAME}" \
+    --header "Content-Type:application/octet-stream" \
+    "${UPLOAD_URL}")
